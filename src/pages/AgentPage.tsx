@@ -141,14 +141,10 @@ export default function AgentPage() {
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                   height: '100%', textAlign: 'center', animation: 'fade-in 0.5s ease-out',
                 }}>
-                  <div style={{
-                    width: 64, height: 64, borderRadius: 20,
-                    background: 'linear-gradient(135deg, #EFF6FF, #F0F9FF)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    marginBottom: 20, border: '1px solid #DBEAFE',
-                  }}>
-                    <Sparkles size={28} style={{ color: '#2563EB' }} />
-                  </div>
+                  <img src="/xg.png" alt="Xeno Logo" style={{
+                    width: 64, height: 64, objectFit: 'contain',
+                    marginBottom: 20,
+                  }} />
                   <h2 style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.03em', marginBottom: 8 }}>
                     What can I help you with?
                   </h2>

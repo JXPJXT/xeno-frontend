@@ -104,7 +104,6 @@ export default function ConversationSidebar({
                     border: isActive ? '1px solid #DBEAFE' : '1px solid transparent',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
-                    groupHover: true,
                   }}
                   onMouseEnter={e => {
                     if (!isActive) {

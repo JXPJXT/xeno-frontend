@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
+import { Send, Bot, Sparkles, Loader2, CheckCircle2, Square } from 'lucide-react';
 import { useAgent } from '../hooks/useAgent';
 import ChatMessage from '../components/ChatMessage';
 import ToolStepCard from '../components/ToolStepCard';
@@ -32,6 +32,7 @@ export default function AgentPage() {
     deleteConversation,
     sendMessage,
     clearChat,
+    stopThinking,
   } = useAgent();
   const [input, setInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -99,6 +100,7 @@ export default function AgentPage() {
         activeConversationId={activeConversationId}
         loadConversation={loadConversation}
         deleteConversation={deleteConversation}
+        isThinking={isThinking}
       />
 
       {/* Main Chat */}
@@ -314,19 +316,37 @@ export default function AgentPage() {
                 t.style.height = Math.min(t.scrollHeight, 120) + 'px';
               }}
             />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isThinking}
-              style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: input.trim() && !isThinking ? '#2563EB' : '#E2E8F0',
-                border: 'none', cursor: input.trim() && !isThinking ? 'pointer' : 'not-allowed',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s ease', flexShrink: 0,
-              }}
-            >
-              <Send size={16} style={{ color: input.trim() && !isThinking ? 'white' : '#94A3B8' }} />
-            </button>
+            {isThinking ? (
+              <button
+                onClick={stopThinking}
+                title="Stop thinking process"
+                style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: '#EF4444',
+                  border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s ease', flexShrink: 0,
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#DC2626'}
+                onMouseLeave={e => e.currentTarget.style.background = '#EF4444'}
+              >
+                <Square size={13} style={{ fill: 'white', color: 'white' }} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: input.trim() ? '#2563EB' : '#E2E8F0',
+                  border: 'none', cursor: input.trim() ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s ease', flexShrink: 0,
+                }}
+              >
+                <Send size={16} style={{ color: input.trim() ? 'white' : '#94A3B8' }} />
+              </button>
+            )}
           </div>
         </div>
       </div>

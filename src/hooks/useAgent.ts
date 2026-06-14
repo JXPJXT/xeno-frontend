@@ -44,6 +44,8 @@ export function useAgent() {
 
   const historyRef = useRef<any[]>([]);
   const { token, tenantId } = useAuth();
+  
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Track running activity IDs so we can mark them done
   const runningActivitiesRef = useRef<Map<string, string>>(new Map()); // tool -> activityId
@@ -129,6 +131,9 @@ export function useAgent() {
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isThinking) return;
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     let convId = activeConversationId;
 
     // 1. If no active conversation, create one first!
@@ -206,6 +211,7 @@ export function useAgent() {
         onStep,
         token || '',
         tenantId || '',
+        controller.signal,
       );
 
       // 3. Save Assistant Message to DB (including steps!)
@@ -250,6 +256,41 @@ export function useAgent() {
       // Refresh sidebar list to update timestamp
       fetchConversations();
     } catch (err: any) {
+      if (controller.signal.aborted) {
+        const stopMsg = 'Thinking process stopped by user.';
+        let assistantMsg: ChatMessage;
+        try {
+          const res = await api.post(`/chats/${convId}/messages`, {
+            role: 'assistant',
+            content: stopMsg,
+            steps: steps.length > 0 ? steps : undefined,
+          });
+          assistantMsg = {
+            id: res.data.id,
+            role: res.data.role,
+            content: res.data.content,
+            timestamp: new Date(res.data.timestamp),
+            steps: res.data.steps as AgentStep[] | undefined,
+          };
+        } catch {
+          assistantMsg = {
+            id: nextId(),
+            role: 'assistant',
+            content: stopMsg,
+            steps: steps.length > 0 ? [...steps] : undefined,
+            timestamp: new Date(),
+          };
+        }
+
+        setMessages(prev => [...prev, assistantMsg]);
+        historyRef.current.push(
+          { role: 'user', content: text.trim() },
+          { role: 'assistant', content: stopMsg },
+        );
+        addActivity('Agent stopped');
+        return;
+      }
+
       const errMsg = `Something went wrong: ${err.message || 'Unknown error'}. Please try again.`;
       
       let errorMsg: ChatMessage;
@@ -283,8 +324,18 @@ export function useAgent() {
       runningActivitiesRef.current.clear();
       setIsThinking(false);
       setCurrentSteps([]);
+      abortControllerRef.current = null;
     }
   }, [isThinking, token, tenantId, activeConversationId, fetchConversations, addActivity, updateActivity]);
+
+  const stopThinking = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsThinking(false);
+    setCurrentSteps([]);
+  }, []);
 
   const clearChat = useCallback(() => {
     setActiveConversationId(null);
@@ -306,6 +357,7 @@ export function useAgent() {
     deleteConversation,
     sendMessage,
     clearChat,
+    stopThinking,
   };
 }
 

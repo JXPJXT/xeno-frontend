@@ -249,7 +249,8 @@ interface CompletionParams {
 async function fetchChatCompletion(
   provider: 'gemini' | 'nvidia' | 'groq',
   apiKey: string,
-  params: CompletionParams
+  params: CompletionParams,
+  signal?: AbortSignal,
 ): Promise<any> {
   let url = '';
   let headers: Record<string, string> = {
@@ -269,6 +270,7 @@ async function fetchChatCompletion(
     method: 'POST',
     headers,
     body: JSON.stringify(params),
+    signal,
   });
 
   const json = await res.json();
@@ -285,11 +287,15 @@ async function createChatCompletionWithRetry(
   params: CompletionParams,
   onStep: (step: AgentStep) => void,
   retries = 5,
-  delay = 6000
+  delay = 6000,
+  signal?: AbortSignal,
 ): Promise<any> {
   try {
-    return await fetchChatCompletion(provider, apiKey, params);
+    return await fetchChatCompletion(provider, apiKey, params, signal);
   } catch (error: any) {
+    if (signal?.aborted) {
+      throw new Error('Agent execution cancelled by user');
+    }
     const isRateLimit = 
       error.status === 429 || 
       error.code === 'rate_limit_exceeded' || 
@@ -325,8 +331,18 @@ async function createChatCompletionWithRetry(
         text: displayMessage
       });
 
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
-      return createChatCompletionWithRetry(provider, apiKey, params, onStep, retries - 1, delay * 2);
+      await new Promise<void>((resolve, reject) => {
+        const onAbort = () => {
+          clearTimeout(timeoutId);
+          reject(new Error('Agent execution cancelled by user'));
+        };
+        if (signal) signal.addEventListener('abort', onAbort);
+        const timeoutId = setTimeout(() => {
+          if (signal) signal.removeEventListener('abort', onAbort);
+          resolve();
+        }, waitMs);
+      });
+      return createChatCompletionWithRetry(provider, apiKey, params, onStep, retries - 1, delay * 2, signal);
     }
     throw error;
   }
@@ -339,6 +355,7 @@ export async function runAgentLoop(
   onStep: (step: AgentStep) => void,
   authToken: string,
   tenantId: string,
+  signal?: AbortSignal,
 ): Promise<string> {
   const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
   const nvidiaApiKey = import.meta.env.VITE_NVIDIA_API_KEY;
@@ -382,9 +399,27 @@ export async function runAgentLoop(
   while (iterations < MAX) {
     iterations++;
 
+    if (signal?.aborted) {
+      throw new Error('Agent execution cancelled by user');
+    }
+
     // Throttle: wait between LLM calls (skip first call)
     if (iterations > 1) {
-      await new Promise(r => setTimeout(r, THROTTLE_MS));
+      await new Promise<void>((resolve, reject) => {
+        const onAbort = () => {
+          clearTimeout(timeoutId);
+          reject(new Error('Agent execution cancelled by user'));
+        };
+        if (signal) signal.addEventListener('abort', onAbort);
+        const timeoutId = setTimeout(() => {
+          if (signal) signal.removeEventListener('abort', onAbort);
+          resolve();
+        }, THROTTLE_MS);
+      });
+    }
+
+    if (signal?.aborted) {
+      throw new Error('Agent execution cancelled by user');
     }
 
     const response = await createChatCompletionWithRetry(
@@ -398,8 +433,15 @@ export async function runAgentLoop(
         temperature: 0.3,
         max_tokens: 2000,
       },
-      onStep
+      onStep,
+      5,
+      6000,
+      signal,
     );
+
+    if (signal?.aborted) {
+      throw new Error('Agent execution cancelled by user');
+    }
 
     const choice = response.choices[0];
     const msg = choice.message;
@@ -415,6 +457,10 @@ export async function runAgentLoop(
     }
 
     for (const tc of msg.tool_calls) {
+      if (signal?.aborted) {
+        throw new Error('Agent execution cancelled by user');
+      }
+
       const toolName = tc.function.name;
       let toolArgs: Record<string, any> = {};
       try {
@@ -427,9 +473,12 @@ export async function runAgentLoop(
 
       let result: any;
       try {
-        result = await executeTool(toolName, toolArgs, authToken, tenantId);
+        result = await executeTool(toolName, toolArgs, authToken, tenantId, signal);
         onStep({ type: 'tool_result', tool: toolName, result, success: true });
       } catch (err: any) {
+        if (signal?.aborted) {
+          throw new Error('Agent execution cancelled by user');
+        }
         result = { error: err.message };
         onStep({ type: 'tool_result', tool: toolName, result, success: false });
       }

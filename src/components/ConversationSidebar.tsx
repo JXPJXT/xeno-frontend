@@ -16,6 +16,7 @@ interface Props {
   activeConversationId: string | null;
   loadConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
+  isThinking?: boolean;
 }
 
 export default function ConversationSidebar({
@@ -25,6 +26,7 @@ export default function ConversationSidebar({
   activeConversationId,
   loadConversation,
   deleteConversation,
+  isThinking = false,
 }: Props) {
   const { user, logout } = useAuth();
 
@@ -45,16 +47,31 @@ export default function ConversationSidebar({
 
       {/* New Chat */}
       <div style={{ padding: '12px 16px' }}>
-        <button onClick={onNewChat} style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-          padding: '10px 14px', borderRadius: 10,
-          background: '#F8FAFC', border: '1px solid #E2E8F0',
-          color: '#334155', fontSize: 13, fontWeight: 600,
-          cursor: 'pointer', fontFamily: 'inherit',
-          transition: 'all 0.15s ease',
-        }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#EFF6FF'; e.currentTarget.style.borderColor = '#BFDBFE'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+        <button 
+          onClick={isThinking ? undefined : onNewChat}
+          disabled={isThinking}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+            padding: '10px 14px', borderRadius: 10,
+            background: isThinking ? '#F1F5F9' : '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            color: isThinking ? '#94A3B8' : '#334155', fontSize: 13, fontWeight: 600,
+            cursor: isThinking ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+            transition: 'all 0.15s ease',
+            opacity: isThinking ? 0.6 : 1,
+          }}
+          onMouseEnter={e => {
+            if (!isThinking) {
+              e.currentTarget.style.background = '#EFF6FF';
+              e.currentTarget.style.borderColor = '#BFDBFE';
+            }
+          }}
+          onMouseLeave={e => {
+            if (!isThinking) {
+              e.currentTarget.style.background = '#F8FAFC';
+              e.currentTarget.style.borderColor = '#E2E8F0';
+            }
+          }}
         >
           <Plus size={15} /> New Chat
         </button>
@@ -93,7 +110,7 @@ export default function ConversationSidebar({
                 <div
                   key={c.id}
                   className="sidebar-conv-item"
-                  onClick={() => loadConversation(c.id)}
+                  onClick={isThinking ? undefined : () => loadConversation(c.id)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -102,10 +119,12 @@ export default function ConversationSidebar({
                     borderRadius: 8,
                     background: isActive ? '#EFF6FF' : 'transparent',
                     border: isActive ? '1px solid #DBEAFE' : '1px solid transparent',
-                    cursor: 'pointer',
+                    cursor: isThinking ? 'not-allowed' : 'pointer',
                     transition: 'all 0.15s ease',
+                    opacity: isThinking && !isActive ? 0.6 : 1,
                   }}
                   onMouseEnter={e => {
+                    if (isThinking) return;
                     if (!isActive) {
                       e.currentTarget.style.background = '#F8FAFC';
                     }
@@ -114,6 +133,7 @@ export default function ConversationSidebar({
                     if (trashBtn) trashBtn.style.opacity = '1';
                   }}
                   onMouseLeave={e => {
+                    if (isThinking) return;
                     if (!isActive) {
                       e.currentTarget.style.background = 'transparent';
                     }
@@ -137,7 +157,8 @@ export default function ConversationSidebar({
                   </div>
                   <button
                     className="trash-btn"
-                    onClick={(e) => {
+                    disabled={isThinking}
+                    onClick={isThinking ? undefined : (e) => {
                       e.stopPropagation();
                       if (confirm('Are you sure you want to delete this conversation?')) {
                         deleteConversation(c.id);
@@ -146,12 +167,12 @@ export default function ConversationSidebar({
                     style={{
                       background: 'none',
                       border: 'none',
-                      cursor: 'pointer',
+                      cursor: isThinking ? 'not-allowed' : 'pointer',
                       color: '#94A3B8',
                       padding: 2,
                       opacity: 0,
                       transition: 'opacity 0.15s ease',
-                      display: 'flex',
+                      display: isThinking ? 'none' : 'flex',
                       alignItems: 'center',
                     }}
                     onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
@@ -174,16 +195,31 @@ export default function ConversationSidebar({
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {STARTERS.map((s, i) => (
-            <button key={i} onClick={() => onPrompt(s)} style={{
-              textAlign: 'left', padding: '8px 10px', borderRadius: 8,
-              background: 'transparent', border: 'none',
-              color: '#475569', fontSize: 12, lineHeight: 1.4,
-              cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
-              transition: 'all 0.15s ease',
-              display: 'flex', alignItems: 'flex-start', gap: 8,
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.color = '#0F172A'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}
+            <button 
+              key={i}
+              onClick={isThinking ? undefined : () => onPrompt(s)}
+              disabled={isThinking}
+              style={{
+                textAlign: 'left', padding: '8px 10px', borderRadius: 8,
+                background: 'transparent', border: 'none',
+                color: isThinking ? '#94A3B8' : '#475569', fontSize: 12, lineHeight: 1.4,
+                cursor: isThinking ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontWeight: 500,
+                transition: 'all 0.15s ease',
+                display: 'flex', alignItems: 'flex-start', gap: 8,
+                opacity: isThinking ? 0.6 : 1,
+              }}
+              onMouseEnter={e => {
+                if (!isThinking) {
+                  e.currentTarget.style.background = '#F8FAFC';
+                  e.currentTarget.style.color = '#0F172A';
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isThinking) {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#475569';
+                }
+              }}
             >
               <MessageSquare size={13} style={{ marginTop: 2, flexShrink: 0, color: '#94A3B8' }} />
               {s}

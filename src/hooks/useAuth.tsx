@@ -24,9 +24,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(
-    () => localStorage.getItem('xeno_token')
-  );
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const logout = useCallback(() => {
@@ -82,7 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (accessToken) {
-      localStorage.setItem('xeno_token', accessToken);
       setToken(accessToken);
       setUser(userData);
     }

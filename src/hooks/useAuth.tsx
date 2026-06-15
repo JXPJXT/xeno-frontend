@@ -56,15 +56,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token, logout]);
 
   const login = async (email: string, password: string) => {
-    // Step 1: Resolve tenant ID if not already stored
+    // Resolve tenant ID and check if the stored one is still valid in the DB
+    const tenantsRes = await authApi.getTenants();
+    const tenants = tenantsRes.data;
+    const tenantList = Array.isArray(tenants) ? tenants : [];
+    if (tenantList.length === 0) {
+      throw new Error('No tenants available');
+    }
+
     let tenantId = localStorage.getItem('xeno_tenant_id');
-    if (!tenantId) {
-      const tenantsRes = await authApi.getTenants();
-      const tenants = tenantsRes.data;
-      const tenantList = Array.isArray(tenants) ? tenants : [];
-      if (tenantList.length === 0) {
-        throw new Error('No tenants available');
-      }
+    const isTenantValid = tenantList.some((t: any) => t.id === tenantId);
+
+    if (!tenantId || !isTenantValid) {
       tenantId = tenantList[0].id;
       localStorage.setItem('xeno_tenant_id', tenantId);
     }

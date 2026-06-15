@@ -61,7 +61,7 @@ export async function executeTool(
       return call(`${API_BASE}/analytics/overview`, { headers: h, signal });
 
     case 'get_customer_segments':
-      return call(`${API_BASE}/analytics/overview`, { headers: h, signal });
+      return call(`${API_BASE}/campaigns/segments`, { headers: h, signal });
 
     case 'get_customers': {
       const params = new URLSearchParams();

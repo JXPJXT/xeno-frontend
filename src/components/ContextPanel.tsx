@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DollarSign, Users, Megaphone, TrendingUp, Clock, Activity, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 /* ─── Types ─── */
 export interface ActivityEntry {
@@ -31,6 +32,7 @@ function timeAgo(date: Date): string {
 }
 
 export default function ContextPanel({ activityLog, onInjectMessage }: Props) {
+  const { token, tenantId } = useAuth();
   const [kpis, setKpis] = useState<any>(null);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [, setTick] = useState(0);
@@ -42,9 +44,14 @@ export default function ContextPanel({ activityLog, onInjectMessage }: Props) {
   }, []);
 
   useEffect(() => {
+    if (!token) {
+      setKpis(null);
+      setCampaigns([]);
+      return;
+    }
     const h = {
-      'Authorization': `Bearer ${localStorage.getItem('xeno_token')}`,
-      'x-tenant-id': localStorage.getItem('xeno_tenant_id') || '',
+      'Authorization': `Bearer ${token}`,
+      'x-tenant-id': tenantId || '',
     };
     fetch('/api/v1/analytics/overview', { headers: h })
       .then(r => r.json()).then(r => setKpis(r.data)).catch(() => {});
@@ -53,7 +60,7 @@ export default function ContextPanel({ activityLog, onInjectMessage }: Props) {
         const d = r.data;
         setCampaigns((Array.isArray(d) ? d : []).slice(0, 5));
       }).catch(() => {});
-  }, []);
+  }, [token, tenantId]);
 
   const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
     DRAFT: { bg: '#F1F5F9', fg: '#64748B' },

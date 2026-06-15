@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { authApi } from '../api/auth';
+import { setClientToken } from '../api/client';
 
 interface User {
   id: string;
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem('xeno_token');
     localStorage.removeItem('xeno_tenant_id');
+    setClientToken(null);
     setToken(null);
     setUser(null);
   }, []);
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (accessToken) {
+      setClientToken(accessToken);
       setToken(accessToken);
       setUser(userData);
     }

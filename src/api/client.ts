@@ -7,9 +7,15 @@ const api = axios.create({
   },
 });
 
+let clientToken: string | null = null;
+
+export function setClientToken(token: string | null) {
+  clientToken = token;
+}
+
 // Request interceptor — inject auth token and tenant ID
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('xeno_token');
+  const token = clientToken;
   const tenantId = localStorage.getItem('xeno_tenant_id');
 
   if (token) {
@@ -34,7 +40,7 @@ api.interceptors.response.use(
   (error) => {
     // If 401, clear tokens and redirect to login
     if (error.response?.status === 401) {
-      localStorage.removeItem('xeno_token');
+      setClientToken(null);
       localStorage.removeItem('xeno_tenant_id');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
